@@ -1,0 +1,14 @@
+gerritSlack:
+  plus_two: individual
+  plus_one: group
+  zero: none
+  minus_one: individual
+  minus_two: individual
+  comments: individual
+  jenkins_success: none
+  jenkins_failure: none
+  new_patch: group
+  qa_approved: none
+  product_approved: none
+  qa_and_product_approved: none
+  merged: none

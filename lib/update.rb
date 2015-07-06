@@ -70,6 +70,11 @@ class Update
     end
   end
 
+  def new_patch?
+    puts json['type']
+    json['type'] == 'patchset-created'
+  end
+
   def sanitized_subject
     sanitized = subject
     sanitized.gsub!('<', '&lt;')

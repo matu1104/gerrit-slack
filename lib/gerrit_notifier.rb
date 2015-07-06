@@ -7,12 +7,22 @@ class GerritNotifier
 
   def self.start!
     @@channel_config = ChannelConfig.new
+    @@notifier_config = NotifierConfig.new
     start_buffer_daemon
     listen_for_updates
   end
 
   def self.psa!(msg)
     notify @@channel_config.all_channels, msg
+  end
+
+  def self.notify_slack(notification_type, update, channels, msg, emoji = '')
+    case @@notifier_config.notifications_for(update.project, notification_type)
+    when :individual
+      notify_user update.owner, msg
+    when :group
+      notify channels, msg, emoji
+    end
   end
 
   def self.notify(channels, msg, emoji = '')
@@ -93,48 +103,57 @@ class GerritNotifier
 
     return if channels.size == 0
 
+    # New patch update
+    if update.new_patch?
+      notify_slack :new_patch, update, channels, "#{update.commit}: ready for *review*"
+    end
+
     # Jenkins update
     if update.jenkins?
       if update.build_successful? && !update.wip?
-        notify channels, "#{update.commit} *passed* Jenkins and is ready for *code review*"
+        notify_slack :jenkins_success, update, channels, "#{update.commit} *passed* Jenkins and is ready for *code review*"
       elsif update.build_failed? && !update.build_aborted?
-        notify_user update.owner, "#{update.commit_without_owner} *failed* on Jenkins"
+        notify_slack :jenkins_failure, update, channels, "#{update.commit_without_owner} *failed* on Jenkins"
       end
     end
 
     # Code review +2
     if update.code_review_approved?
-      notify channels, "#{update.author_slack_name} has *+2'd* #{update.commit}: ready for *QA*"
+      notify_slack :plus_two, update, channels, "#{update.author_slack_name} has *+2'd* #{update.commit}: ready for *QA*"
     end
 
     # Code review +1
     if update.code_review_tentatively_approved?
-      notify channels, "#{update.author_slack_name} has *+1'd* #{update.commit}: needs another set of eyes for *code review*"
+      notify_slack :plus_one, update, channels, "#{update.author_slack_name} has *+1'd* #{update.commit}: needs another set of eyes for *code review*"
     end
 
     # QA/Product
     if update.qa_approved? && update.product_approved?
-      notify channels, "#{update.author_slack_name} has *QA/Product-approved* #{update.commit}!", ":mj: :victory:"
+      notify_slack :qa_and_product_approved, update, channels, "#{update.author_slack_name} has *QA/Product-approved* #{update.commit}!", ":mj: :victory:"
     elsif update.qa_approved?
-      notify channels, "#{update.author_slack_name} has *QA-approved* #{update.commit}!", ":mj:"
+      notify_slack :qa_approved, update, channels, "#{update.author_slack_name} has *QA-approved* #{update.commit}!", ":mj:"
     elsif update.product_approved?
-      notify channels, "#{update.author_slack_name} has *Product-approved* #{update.commit}!", ":victory:"
+      notify_slack :product_approved, update, channels, "#{update.author_slack_name} has *Product-approved* #{update.commit}!", ":victory:"
     end
 
-    # Any minuses (Code/Product/QA)
-    if update.minus_1ed? || update.minus_2ed?
-      verb = update.minus_1ed? ? "-1'd" : "-2'd"
-      notify channels, "#{update.author_slack_name} has *#{verb}* #{update.commit}"
+    # 1 minuses (Code/Product/QA)
+    if update.minus_1ed?
+      notify_slack :minus_one, update, channels, "#{update.author_slack_name} has *-1'd* #{update.commit}"
+    end
+
+    # 2 minuses (Code/Product/QA)
+    if update.minus_2ed?
+      notify_slack :minus_two, update, channels, "#{update.author_slack_name} has *-2'd* #{update.commit}"
     end
 
     # New comment added
     if update.comment_added? && update.human? && update.comment != ''
-      notify channels, "#{update.author_slack_name} has left comments on #{update.commit}: \"#{update.comment}\""
+      notify_slack :comments, update, channels, "#{update.author_slack_name} has left comments on #{update.commit}: \"#{update.comment}\""
     end
 
     # Merged
     if update.merged?
-      notify channels, "#{update.commit} was merged! \\o/", ":yuss: :dancing_cool:"
+      notify_slack :merged, update, channels, "#{update.commit} was merged! \\o/", ":yuss: :dancing_cool:"
     end
   end
 end
