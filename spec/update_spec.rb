@@ -79,7 +79,7 @@ describe 'Update' do
     it "is false when not aborted" do
       json = File.read('spec/fixtures/comment-added.json')
       update = Update.new(json)
-      expect(update.build_aborted?).to be_false      
+      expect(update.build_aborted?).to be_false
     end
   end
 

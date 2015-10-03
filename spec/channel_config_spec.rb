@@ -3,6 +3,10 @@ require 'spec_helper'
 describe ChannelConfig do
   let(:config) { ChannelConfig.new('spec/fixtures/config/channels.yml') }
 
+  before(:each) do
+    Application.instance.stub(:use_database?).and_return(false)
+  end
+
   describe "#channels_to_notify" do
     context "when the project has an asterisk" do
       it "is always included no matter who the owner is" do
