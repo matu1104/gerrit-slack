@@ -1,0 +1,13 @@
+app:
+  database:
+    enable: true
+    configuration:
+      adapter: mysql2,
+      encoding: utf8,
+      collation: utf8_general_ci,
+      reconnect: false,
+      pool: 5,
+      database: gerrslack_fast,
+      username: root,
+      password: root,
+      host: localhost
