@@ -3,6 +3,10 @@ require 'rspec'
 describe NotifierConfig do
   let(:config) { NotifierConfig.new('spec/fixtures/config/notifications.yml') }
 
+  before(:each) do
+    Application.instance.stub(:use_database?).and_return(false)
+  end
+
   describe "#notifications_for" do
     context "when project" do
       it "is not in notification.yml" do
